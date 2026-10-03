@@ -3,24 +3,18 @@ class FoodWheel {
     constructor() {
         this.canvas = document.getElementById('wheel');
         this.ctx = this.canvas.getContext('2d');
-        this.spinBtn = document.getElementById('spinBtn');
-        this.resultEl = document.getElementById('result');
-        this.foodInput = document.getElementById('foodInput');
-        this.addFoodBtn = document.getElementById('addFoodBtn');
-        this.foodTags = document.getElementById('foodTags');
         this.themeToggle = document.getElementById('themeToggle');
 
-        // 默认食物列表
-        this.defaultFoods = [
-            '火锅', '烧烤', '寿司', '披萨', '汉堡',
-            '拉面', '炒饭', '饺子', '麻辣烫', '螺蛳粉',
-            '烤肉', '日料', '韩餐', '泰餐', '沙拉'
+        // 固定食物列表（带权重）
+        this.foods = [
+            { name: '食堂-二楼', weight: 40, color: '#FF6B6B' },
+            { name: '食堂-三楼', weight: 20, color: '#4ECDC4' },
+            { name: '马记永', weight: 20, color: '#45B7D1' },
+            { name: '饭团', weight: 20, color: '#96CEB4' }
         ];
 
-        this.foods = this.loadFoods();
         this.isSpinning = false;
         this.currentRotation = 0;
-        this.colors = this.generateColors();
 
         this.init();
     }
@@ -29,13 +23,13 @@ class FoodWheel {
         this.setupCanvas();
         this.drawWheel();
         this.bindEvents();
-        this.renderFoodTags();
         this.initTheme();
         this.registerServiceWorker();
+        this.createResultPopup();
     }
 
     setupCanvas() {
-        const size = Math.min(window.innerWidth * 0.8, 400);
+        const size = Math.min(window.innerWidth * 0.85, 480);
         const dpr = window.devicePixelRatio || 1;
         this.canvas.width = size * dpr;
         this.canvas.height = size * dpr;
@@ -48,45 +42,19 @@ class FoodWheel {
         this.radius = size / 2 - 10;
     }
 
-    generateColors() {
-        const baseColors = [
-            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-            '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
-            '#F8B500', '#00CED1', '#FF69B4', '#32CD32', '#FF7F50'
-        ];
-        return baseColors;
-    }
-
-    getColor(index) {
-        return this.colors[index % this.colors.length];
-    }
-
     drawWheel() {
         const ctx = this.ctx;
         const centerX = this.centerX;
         const centerY = this.centerY;
         const radius = this.radius;
-        const foods = this.foods;
 
         ctx.clearRect(0, 0, this.size, this.size);
 
-        if (foods.length === 0) {
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            ctx.fillStyle = '#ddd';
-            ctx.fill();
-            ctx.fillStyle = '#999';
-            ctx.font = '16px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('请添加食物', centerX, centerY);
-            return;
-        }
+        const totalWeight = this.foods.reduce((sum, f) => sum + f.weight, 0);
+        let startAngle = -Math.PI / 2; // 从顶部开始
 
-        const sliceAngle = (2 * Math.PI) / foods.length;
-
-        foods.forEach((food, index) => {
-            const startAngle = index * sliceAngle - Math.PI / 2;
+        this.foods.forEach((food) => {
+            const sliceAngle = (food.weight / totalWeight) * 2 * Math.PI;
             const endAngle = startAngle + sliceAngle;
 
             // 绘制扇形
@@ -94,12 +62,12 @@ class FoodWheel {
             ctx.moveTo(centerX, centerY);
             ctx.arc(centerX, centerY, radius, startAngle, endAngle);
             ctx.closePath();
-            ctx.fillStyle = this.getColor(index);
+            ctx.fillStyle = food.color;
             ctx.fill();
 
             // 绘制分隔线
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.lineWidth = 3;
             ctx.stroke();
 
             // 绘制文字
@@ -109,61 +77,81 @@ class FoodWheel {
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = '#fff';
-            ctx.font = `bold ${this.getFontSize(food)}px sans-serif`;
+            ctx.font = `bold ${this.getFontSize(food.name)}px sans-serif`;
             ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-            ctx.shadowBlur = 3;
+            ctx.shadowBlur = 4;
             ctx.shadowOffsetX = 1;
             ctx.shadowOffsetY = 1;
-            ctx.fillText(food, radius - 20, 0);
+            ctx.fillText(food.name, radius - 25, 0);
             ctx.restore();
+
+            startAngle = endAngle;
         });
 
         // 中心圆
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 35, 0, 2 * Math.PI);
+        ctx.arc(centerX, centerY, 40, 0, 2 * Math.PI);
         ctx.fillStyle = '#fff';
         ctx.fill();
         ctx.strokeStyle = '#ddd';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.stroke();
 
-        // 中心文字
+        // 中心图标
         ctx.fillStyle = '#667eea';
-        ctx.font = 'bold 14px sans-serif';
+        ctx.font = 'bold 20px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('GO!', centerX, centerY);
+        ctx.fillText('🍽️', centerX, centerY);
     }
 
     getFontSize(text) {
-        const baseSize = this.foods.length <= 8 ? 16 : this.foods.length <= 12 ? 14 : 12;
-        if (text.length > 4) return baseSize - 2;
-        return baseSize;
+        if (text.length <= 3) return 20;
+        if (text.length <= 5) return 18;
+        return 16;
+    }
+
+    // 加权随机选择
+    weightedRandom() {
+        const totalWeight = this.foods.reduce((sum, f) => sum + f.weight, 0);
+        let random = Math.random() * totalWeight;
+        
+        for (let i = 0; i < this.foods.length; i++) {
+            random -= this.foods[i].weight;
+            if (random <= 0) {
+                return i;
+            }
+        }
+        return this.foods.length - 1;
     }
 
     spin() {
-        if (this.isSpinning || this.foods.length < 2) {
-            if (this.foods.length < 2) {
-                this.showResult('至少需要2种食物哦~');
-            }
-            return;
-        }
+        if (this.isSpinning) return;
 
         this.isSpinning = true;
-        this.spinBtn.disabled = true;
-        this.spinBtn.querySelector('.btn-text').textContent = '转动中...';
-        this.resultEl.classList.remove('winner');
-        this.showResult('转盘转动中...');
+        this.hideResult();
 
-        // 随机选择结果
-        const winnerIndex = Math.floor(Math.random() * this.foods.length);
-        const sliceAngle = 360 / this.foods.length;
+        // 加权随机选择结果
+        const winnerIndex = this.weightedRandom();
+        const totalWeight = this.foods.reduce((sum, f) => sum + f.weight, 0);
+        
+        // 计算选中扇形的中心角度
+        let startDegree = 0;
+        for (let i = 0; i < winnerIndex; i++) {
+            startDegree += (this.foods[i].weight / totalWeight) * 360;
+        }
+        const sliceDegree = (this.foods[winnerIndex].weight / totalWeight) * 360;
+        const centerDegree = startDegree + sliceDegree / 2;
 
-        // 计算旋转角度 - 让指针指向选中的扇形中心
-        // 指针在顶部(12点钟方向)，扇形从-90度开始绘制
-        const targetAngle = 360 - (winnerIndex * sliceAngle + sliceAngle / 2);
+        // 指针在顶部(0度)，需要让选中扇形转到顶部
+        // 转盘顺时针旋转，目标角度 = 360 - centerDegree
+        const targetAngle = 360 - centerDegree;
         const spins = 5 + Math.floor(Math.random() * 3); // 5-7圈
-        const finalRotation = this.currentRotation + spins * 360 + targetAngle - (this.currentRotation % 360);
+        
+        // 在扇形内加一点随机偏移（避免总是正中）
+        const randomOffset = (Math.random() - 0.5) * sliceDegree * 0.6;
+        
+        const finalRotation = this.currentRotation + spins * 360 + targetAngle + randomOffset - (this.currentRotation % 360);
 
         this.currentRotation = finalRotation;
         this.canvas.style.transform = `rotate(${finalRotation}deg)`;
@@ -171,78 +159,38 @@ class FoodWheel {
         // 动画结束后显示结果
         setTimeout(() => {
             this.isSpinning = false;
-            this.spinBtn.disabled = false;
-            this.spinBtn.querySelector('.btn-text').textContent = '再转一次';
-            this.showResult(`🎉 ${this.foods[winnerIndex]}！`, true);
+            this.showResult(this.foods[winnerIndex].name);
         }, 4000);
     }
 
-    showResult(text, isWinner = false) {
-        const resultP = this.resultEl.querySelector('p');
-        resultP.textContent = text;
-        if (isWinner) {
-            this.resultEl.classList.add('winner');
-        }
+    createResultPopup() {
+        // 创建遮罩层
+        this.overlay = document.createElement('div');
+        this.overlay.className = 'overlay';
+        this.overlay.addEventListener('click', () => this.hideResult());
+        document.body.appendChild(this.overlay);
+
+        // 创建结果弹窗
+        this.popup = document.createElement('div');
+        this.popup.className = 'result-popup';
+        this.popup.innerHTML = `
+            <p id="resultText"></p>
+            <div class="sub">点击任意处关闭</div>
+        `;
+        this.popup.addEventListener('click', () => this.hideResult());
+        document.body.appendChild(this.popup);
     }
 
-    addFood(food) {
-        food = food.trim();
-        if (!food) return;
-        if (this.foods.includes(food)) {
-            alert('这个食物已经在列表里了~');
-            return;
-        }
-        if (this.foods.length >= 20) {
-            alert('最多添加20种食物哦~');
-            return;
-        }
-        this.foods.push(food);
-        this.saveFoods();
-        this.renderFoodTags();
-        this.drawWheel();
-        this.foodInput.value = '';
+    showResult(text) {
+        const resultText = this.popup.querySelector('#resultText');
+        resultText.textContent = text;
+        this.overlay.classList.add('show');
+        this.popup.classList.add('show');
     }
 
-    removeFood(food) {
-        const index = this.foods.indexOf(food);
-        if (index > -1) {
-            this.foods.splice(index, 1);
-            this.saveFoods();
-            this.renderFoodTags();
-            this.drawWheel();
-        }
-    }
-
-    renderFoodTags() {
-        this.foodTags.innerHTML = '';
-        this.foods.forEach(food => {
-            const tag = document.createElement('span');
-            tag.className = 'food-tag';
-            tag.innerHTML = `
-                <span>${food}</span>
-                <button class="remove-btn" title="删除">×</button>
-            `;
-            tag.querySelector('.remove-btn').addEventListener('click', () => {
-                this.removeFood(food);
-            });
-            this.foodTags.appendChild(tag);
-        });
-    }
-
-    loadFoods() {
-        const saved = localStorage.getItem('foodWheel_foods');
-        if (saved) {
-            try {
-                return JSON.parse(saved);
-            } catch (e) {
-                return [...this.defaultFoods];
-            }
-        }
-        return [...this.defaultFoods];
-    }
-
-    saveFoods() {
-        localStorage.setItem('foodWheel_foods', JSON.stringify(this.foods));
+    hideResult() {
+        this.overlay.classList.remove('show');
+        this.popup.classList.remove('show');
     }
 
     initTheme() {
@@ -276,17 +224,12 @@ class FoodWheel {
     }
 
     bindEvents() {
-        this.spinBtn.addEventListener('click', () => this.spin());
-
-        this.addFoodBtn.addEventListener('click', () => {
-            this.addFood(this.foodInput.value);
-        });
-
-        this.foodInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.addFood(this.foodInput.value);
-            }
-        });
+        // 点击转盘转动
+        this.canvas.addEventListener('click', () => this.spin());
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.spin();
+        }, { passive: false });
 
         this.themeToggle.addEventListener('click', () => this.toggleTheme());
 
@@ -298,6 +241,14 @@ class FoodWheel {
                 this.setupCanvas();
                 this.drawWheel();
             }, 200);
+        });
+
+        // 键盘空格/回车也能触发
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'Enter') {
+                e.preventDefault();
+                this.spin();
+            }
         });
     }
 }

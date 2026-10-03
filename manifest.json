@@ -1,7 +1,7 @@
 {
-    "name": "食物转盘 - 今天吃什么",
-    "short_name": "食物转盘",
-    "description": "一个有趣的食物选择转盘，帮你决定今天吃什么！",
+    "name": "吃什么",
+    "short_name": "吃什么",
+    "description": "转盘决定今天吃什么！",
     "start_url": "./index.html",
     "display": "standalone",
     "background_color": "#f5f7fa",
