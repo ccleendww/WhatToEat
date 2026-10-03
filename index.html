@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#667eea">
+    <title>食物转盘 - 今天吃什么？</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🍜 今天吃什么？</h1>
+            <button id="themeToggle" class="theme-toggle" aria-label="切换主题">
+                <span class="theme-icon">🌙</span>
+            </button>
+        </header>
+
+        <main>
+            <div class="wheel-container">
+                <div class="pointer"></div>
+                <canvas id="wheel" width="400" height="400"></canvas>
+            </div>
+
+            <div class="result" id="result">
+                <p>点击按钮开始抽奖</p>
+            </div>
+
+            <button id="spinBtn" class="spin-btn">
+                <span class="btn-text">开始转动</span>
+            </button>
+
+            <div class="food-list-section">
+                <h2>食物列表</h2>
+                <div class="food-input">
+                    <input type="text" id="foodInput" placeholder="添加新食物..." maxlength="10">
+                    <button id="addFoodBtn">添加</button>
+                </div>
+                <div class="food-tags" id="foodTags"></div>
+            </div>
+        </main>
+
+        <footer>
+            <p>🎲 美食转盘 · 选择困难症救星</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
